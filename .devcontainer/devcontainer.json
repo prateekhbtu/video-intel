@@ -1,0 +1,21 @@
+{
+  "name": "video-intel",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "hostRequirements": { "cpus": 2, "memory": "8gb", "storage": "32gb" },
+  "forwardPorts": [3000, 8000, 8474, 8554, 9090, 9101, 9102, 9997],
+  "portsAttributes": {
+    "3000": { "label": "grafana" },
+    "8000": { "label": "cloud-api" },
+    "8554": { "label": "rtsp" },
+    "9090": { "label": "prometheus" }
+  },
+  "postCreateCommand": "bash .devcontainer/setup.sh",
+  "remoteEnv": {
+    "PYTHONUNBUFFERED": "1",
+    "DATA": "/workspaces/video-intel/data"
+  }
+}

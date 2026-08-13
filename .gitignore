@@ -1,0 +1,10 @@
+# .gitignore
+__pycache__/
+*.pyc
+logs/*.jsonl
+data/
+*.onnx
+*.db
+*.mp4
+.env
+venv/
