@@ -1,0 +1,14 @@
+a_cam01:
+  - name: entrance
+    type: dwell
+    dwell_seconds: 25
+    polygon: [[0.30,0.40],[0.70,0.40],[0.70,0.95],[0.30,0.95]]
+  - name: doorway
+    type: tripwire
+    line: [[0.10,0.55],[0.90,0.55]]
+    direction: down
+a_cam02:
+  - name: corridor
+    type: dwell
+    dwell_seconds: 30
+    polygon: [[0.20,0.30],[0.80,0.30],[0.80,0.90],[0.20,0.90]]
