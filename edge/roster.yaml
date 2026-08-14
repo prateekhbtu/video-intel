@@ -1,0 +1,8 @@
+analyse:
+  - a_cam01
+  - a_cam02
+  - a_cam03
+  - b_cam01
+  - b_cam02
+  - b_cam03
+record_all: true

@@ -2,7 +2,7 @@ import onnxruntime as ort, numpy as np
 from common import telem
 
 class Detector:
-    def __init__(self, path, size=640, conf=0.45):
+    def __init__(self, path, size=384, conf=0.70):
         so = ort.SessionOptions()
         so.intra_op_num_threads = 2
         self.s = ort.InferenceSession(path, so, providers=["CPUExecutionProvider"])
@@ -20,14 +20,17 @@ class Detector:
             out = self.s.run(None, {self.inp: x})
             logits, boxes = out[0][0], out[1][0]
         
-        probs = logits if logits.max() <= 1.0 else 1 / (1 + np.exp(-logits))
-        scores = probs.max(axis=-1)
+        probs = 1 / (1 + np.exp(-logits))
+        # STRICT FIX: Slice out the background class so we only look at COCO objects (0-79)
+        scores = probs[:, :80].max(axis=-1)
         keep = scores > self.conf
         
         res = []
-        for b in boxes[keep]:
-            cx, cy, bw, bh = b
-            res.append([cx - bw/2, cy - bh/2, cx + bw/2, cy + bh/2])
-        
+        for i, b in enumerate(boxes):
+            if keep[i]:
+                cx, cy, bw, bh = b[:4]
+                res.append([cx - bw/2, cy - bh/2, cx + bw/2, cy + bh/2])
+                
+        res = res[:10]
         telem.emit("detect_result", camera_id=camera_id, n_det=len(res))
         return res
