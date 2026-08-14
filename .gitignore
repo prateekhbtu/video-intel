@@ -1,9 +1,7 @@
 # .gitignore
 __pycache__/
 *.pyc
-logs/*.jsonl
-*.onnx
-*.db
-*.mp4
 .env
 venv/
+seg/
+urfall/
