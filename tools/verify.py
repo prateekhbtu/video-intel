@@ -85,11 +85,13 @@ def _keeps_up(rec):
     lat = [x["latency_ms"] for x in d if "latency_ms" in x]
     if not lat:
         return None, "no latencies"
+    boot = rec["agent_ready"]
+    target_fps = boot[-1].get("target_fps", 4) if boot else 4
     p95 = sorted(lat)[int(0.95 * len(lat))]
-    budget = 1000.0 / 4.0          # target_fps = 4 -> 250 ms per frame
+    budget = 1000.0 / target_fps
     ok = p95 <= budget
     return ok, (f"p95 detect latency {p95:.0f} ms against a {budget:.0f} ms "
-                f"per-frame budget at 4 fps (mean {statistics.mean(lat):.0f} ms). "
+                f"per-frame budget at {target_fps:g} fps (mean {statistics.mean(lat):.0f} ms). "
                 f"Over budget means frames are queueing or being dropped.")
 
 
