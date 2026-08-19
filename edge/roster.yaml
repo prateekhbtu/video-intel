@@ -1,36 +1,22 @@
-# Fleet roster. Which cameras exist, who owns them, and which get inference.
-#
-# WHY tenant IS ON THE SITE AND NOT IN THE CODE
-#   PS-4 Q4.2b asks for a rollback scoped to one customer. The cohort key that
-#   makes that possible has to exist before the deploy goes out, not after the
-#   incident. Every policy row, every cohort metric and every canary verdict is
-#   keyed by this tenant string.
-#
-# WHY analyse AND reid_enabled ARE SEPARATE LISTS
-#   Recording is cheap and legally useful; inference is expensive; biometric
-#   embedding is expensive AND carries a compliance burden. They are three
-#   different decisions and a customer may want a camera recorded but never
-#   analysed — a staff break room is the standard example. Collapsing them
-#   into one flag is how a system ends up embedding faces in a bathroom
-#   corridor because someone wanted motion alerts in the lobby.
-
 sites:
   a:
     tenant: acme-retail
-    cameras: [a_cam01, a_cam02, a_cam03, a_cam04]
+    cameras:
+    - a_cam01
+    - a_cam02
+    - a_cam03
+    - a_cam04
   b:
     tenant: globex-wh
-    cameras: [b_cam01, b_cam02]
-
-# Cameras that run the detect -> track -> zone cascade.
-analyse: [a_cam01, a_cam02, a_cam03, a_cam04, b_cam01, b_cam02]
-
-# Cameras that additionally compute ReID descriptors. Site A is the PS-3
-# cross-camera topology built by sim/build_topology.sh, where a_cam01 and
-# a_cam02 share identities by construction through a 12 s time offset, and
-# a_cam03 / a_cam04 carry deliberate illumination and resolution shift so
-# Q3.1d domain drift can be measured rather than asserted.
-reid_enabled: [a_cam01, a_cam02, a_cam03, a_cam04]
-
-# Record every camera, including ones not analysed.
+    cameras:
+    - b_cam01
+    - b_cam02
+analyse:
+- a_cam01
+- b_cam01
+reid_enabled:
+- a_cam01
+- a_cam02
+- a_cam03
+- a_cam04
 record_all: true
