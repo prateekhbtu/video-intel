@@ -1,1 +1,2 @@
-av_interleaved_write_frame(): Broken pipe
+[tcp @ 0x5608d7184c40] Connection to tcp://127.0.0.1:8554?timeout=0 failed: Connection refused
+[out#0/rtsp @ 0x5608d7183e40] Could not write header (incorrect codec parameters ?): Connection refused
