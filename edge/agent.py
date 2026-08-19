@@ -193,6 +193,7 @@ def main():
     # THE record that makes a silent site detectable. verify.py compares the
     # cameras that actually produced detections against `analysed`.
     telem.emit("agent_ready", site_id=site, tenant=tenant,
+               target_fps=config.TARGET_FPS,
                cameras=len(cameras), analysed=len(analysed),
                analysed_cameras=sorted(analysed),
                reid=bool(emb) and emb.kind == "onnx",
