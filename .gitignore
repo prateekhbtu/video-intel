@@ -1,7 +1,38 @@
-# .gitignore
+# ---- secrets ------------------------------------------------------------
+# auto.key and auto.crt were committed in bf32a92. Listing them here stops the
+# NEXT mistake; it does not undo that one. The key stays retrievable from
+# history until `git filter-repo --invert-paths --path auto.key --path auto.crt`
+# has run and every ref has been force-pushed. Rotate the key regardless:
+# assume anything that reached a public remote is compromised.
+.env
+.env.*
+!.env.example
+auto.key
+auto.crt
+*.pem
+*.p12
+
+# ---- generated data -----------------------------------------------------
+# `data/` was ignored until the ed7921b pull removed the line and committed
+# 618 MB: a 78 MB urfall zip, the ONNX weights, twelve sim clips and both
+# SQLite databases WITH their -wal and -shm files, which are not even
+# meaningful outside the process that wrote them.
+data/
+results/
+logs/*.jsonl
+*.db
+*.db-wal
+*.db-shm
+*.onnx
+*.mp4
+*.avi
+*.zip
+*.jsonl
+
+# ---- python -------------------------------------------------------------
 __pycache__/
 *.pyc
-.env
+*.egg-info/
+.venv/
 venv/
-seg/
-urfall/
+.pytest_cache/

@@ -1,0 +1,34 @@
+# video-intel dependencies.
+#
+# There was no requirements file before this one. .devcontainer/setup.sh
+# pip-installed eleven packages inline, and three packages the code already
+# imported were not among them: scipy (edge/tracker.py at the time), pandas and
+# streamlit (docs/ui/app.py). A fresh devcontainer therefore died with
+# ModuleNotFoundError at agent import time, which is not a dependency problem,
+# it is an unstated-dependency problem.
+#
+#   pip install -r requirements.txt              # runtime, the edge and cloud
+#   pip install -r requirements.txt -r requirements-dev.txt   # plus benchmarks
+
+# ---- edge runtime -------------------------------------------------------
+av==12.3.0                    # RTSP decode
+onnxruntime==1.19.2           # detector and ReID inference, CPU
+opencv-python-headless==4.10.0.84
+numpy==1.26.4                 # <2.0: onnxruntime 1.19 and torch pin to it
+pyyaml==6.0.2
+requests==2.32.3
+pillow==10.4.0
+
+# ---- cloud --------------------------------------------------------------
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+psycopg2-binary==2.9.9
+pgvector==0.3.5               # vector(512) adapter, Phase 4.1
+
+# ---- observability ------------------------------------------------------
+prometheus-client==0.20.0
+psutil==6.0.0                 # RSS measurement in the scale benchmarks
+
+# ---- dashboard ----------------------------------------------------------
+streamlit==1.38.0
+pandas==2.2.2

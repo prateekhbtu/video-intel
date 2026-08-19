@@ -54,6 +54,10 @@ class Embedder:
         self.inp = None
         self.dim = DIM
         self.kind = "fallback"
+        # Stamped onto every sighting. A descriptor is only comparable to
+        # others from the SAME model, so an unversioned embedding is a
+        # silent correctness bug waiting for the first model upgrade.
+        self.ver = self.path.rsplit("/", 1)[-1]
         try:
             import onnxruntime as ort
             import os

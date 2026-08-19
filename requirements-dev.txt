@@ -1,0 +1,28 @@
+# Benchmark, export and evaluation dependencies. NOT needed to run the system.
+#
+# Kept separate on purpose: the edge agent must install and boot without
+# torch. Putting a 2 GB training stack in the runtime path of an on-premise
+# box is how a "30 minute deployment" becomes an afternoon.
+
+# ---- Phase 2: ReID model export and offline evaluation -------------------
+torch==2.4.1
+torchvision==0.19.1
+torchreid==0.2.5              # OSNet-x0.25 weights and builder
+onnx==1.16.2
+onnxsim==0.4.36
+
+# ---- Phase 2.4: face-vs-ReID feasibility, measured on your own footage ---
+insightface==0.7.3
+
+# ---- Phase 5: gallery scale benchmark, 1K to 1M --------------------------
+hnswlib==0.8.0
+
+# ---- Phases 1.4 / 8 / 9: object datasets and class inventory -------------
+roboflow==1.1.44
+supervision==0.23.0
+ultralytics==8.2.100
+kaggle==1.6.17                # Market-1501 download
+
+# ---- misc ---------------------------------------------------------------
+scipy==1.14.1                 # only used by legacy tooling; the tracker no
+                              # longer needs it

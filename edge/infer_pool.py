@@ -36,6 +36,7 @@ class InferencePool:
     def __init__(self, model_path=None, workers=None, queue_max=None, classes=None):
         self.workers_n = workers or config.INFER_WORKERS
         self.q = queue.Queue(maxsize=queue_max or config.INFER_QUEUE_MAX)
+        self.classes = classes
         self.detector = detect.Detector(model_path, classes=classes)
         self._lock = threading.Lock()      # ORT sessions are thread safe, but
                                            # we serialise to keep CPU honest
@@ -86,6 +87,22 @@ class InferencePool:
                 telem.emit("infer_error", camera_id=cam, err=repr(e))
             finally:
                 self.q.task_done()
+
+    def reload(self, model_path, model_ver=None):
+        """Hot-swap the weights behind the pool. Called by ModelManager after
+        an atomic activate, which is what makes PS-4 Q4.2b's per-tenant
+        rollback take one control poll instead of one deploy.
+
+        The new session is BUILT FIRST and only then swapped in under the
+        lock. If the load raises, the pool keeps serving the old model and the
+        rollback fails loudly rather than taking the site offline."""
+        old = self.detector
+        fresh = detect.Detector(model_path, classes=self.classes)
+        with self._lock:
+            self.detector = fresh
+        telem.emit("infer_pool_reload", model_ver=model_ver or fresh.ver,
+                   previous=getattr(old, "ver", None), queued=self.q.qsize())
+        return fresh
 
     def _report_loop(self, period=10):
         last = (0, 0, 0)
