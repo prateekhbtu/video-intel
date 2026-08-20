@@ -1,0 +1,47 @@
+groups:
+- name: video-intel
+  rules:
+  # Fires when the MEASUREMENT is broken, not when the system is unhealthy.
+  # Round 1 reported a completeness ratio of 2.33 for 168 consecutive readings
+  # and nothing paged, because nobody was looking. A metric outside its
+  # physical bounds is a broken sensor, and a broken sensor must page.
+  - alert: CompletenessMetricBroken
+    expr: vi_completeness_ratio > 1.05 or vi_completeness_ratio < 0
+    for: 1m
+    labels: {severity: critical}
+    annotations:
+      summary: "Completeness outside physical bounds on {{$labels.camera}}: the SENSOR is broken"
+
+  - alert: CameraSilent
+    expr: time() - vi_camera_last_event_seconds > 300
+    for: 2m
+    labels: {severity: critical}
+    annotations:
+      summary: "Camera {{$labels.camera}} silent for over 5 minutes"
+
+  - alert: InferenceDropRateHigh
+    expr: rate(vi_infer_dropped[5m]) / clamp_min(rate(vi_infer_submitted[5m]), 1) > 0.2
+    for: 5m
+    labels: {severity: warning}
+    annotations:
+      summary: "Inference queue dropping >20% on {{$labels.site}}"
+
+  - alert: OutboxBacklog
+    expr: vi_outbox_depth > 500
+    for: 10m
+    labels: {severity: warning}
+    annotations:
+      summary: "Outbox depth {{$value}} on {{$labels.site}}: delivery is falling behind"
+
+  - alert: DeadLettersPresent
+    expr: vi_outbox_dlq > 0
+    for: 1m
+    labels: {severity: critical}
+    annotations:
+      summary: "Dead-lettered events on {{$labels.site}}: data is being discarded"
+
+  - alert: ThreadCrashed
+    expr: increase(vi_thread_crashes[10m]) > 0
+    labels: {severity: critical}
+    annotations:
+      summary: "Supervised thread {{$labels.thread}} crashed"
