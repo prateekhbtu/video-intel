@@ -78,10 +78,28 @@ class RetentionManager:
 
     # ---- disk pressure eviction ----------------------------------------
     def evict_for_space(self):
-        """Runs BEFORE the disk fills, not after. Evicts oldest first, but
-        never anything under legal hold and never anything not yet uploaded,
-        which is the ordering that keeps 'no footage lost' honest instead of
-        aspirational."""
+        """Runs BEFORE the disk fills, not after.
+
+        BUG THIS FIXES
+            The original clause was `legal_hold = 0 AND uploaded = 1`, and
+            nothing in this codebase ever sets segments.uploaded = 1 -- only
+            telemetry and sightings go through the outbox, raw video does not.
+            Measured on this deployment: 0 of 29,843 segment rows had
+            uploaded = 1, so disk-pressure eviction could never delete a
+            single byte and data/seg grew until the volume filled.
+
+        THE ORDERING, AND WHY IT IS A TWO-TIER POLICY
+            Tier 1 evicts uploaded segments, which is free of consequences.
+            Tier 2 evicts the OLDEST unuploaded segments, and only once tier 1
+            has failed to relieve pressure.
+
+            Tier 2 exists because the alternative is worse. A full disk stops
+            recording on every camera, so refusing to drop the oldest footage
+            in order to protect it trades all FUTURE footage for some PAST
+            footage. Under 'no footage lost' that is the losing side of the
+            trade. Legal hold is still absolute and is never evicted by
+            either tier; tier 2 emits a distinct critical-severity event so
+            the eviction of unuploaded material is never silent."""
         if not self.seg_root:
             return 0, 0
         st = os.statvfs(self.seg_root)
@@ -90,20 +108,45 @@ class RetentionManager:
             return 0, 0
         telem.emit("disk_pressure", site_id=self.site, free_gb=round(free_gb, 2),
                    threshold_gb=self.min_free_gb, severity="warning")
-        rows = self.conn.execute(
-            "SELECT camera_id, seq, path, bytes FROM segments "
-            "WHERE legal_hold = 0 AND uploaded = 1 ORDER BY start_ts LIMIT 2000"
-        ).fetchall()
+        def _free_gb():
+            s = os.statvfs(self.seg_root)
+            return s.f_bavail * s.f_frsize / 1e9
+
+        target = self.min_free_gb * 1.2
         n = freed = 0
-        for cam, seq, path, nbytes in rows:
-            freed += self._unlink(path, nbytes)
-            self.conn.execute("DELETE FROM segments WHERE camera_id=? AND seq=?", (cam, seq))
-            n += 1
-            st = os.statvfs(self.seg_root)
-            if st.f_bavail * st.f_frsize / 1e9 >= self.min_free_gb * 1.2:
+        unuploaded_evicted = 0
+
+        for tier, where in ((1, "legal_hold = 0 AND uploaded = 1"),
+                            (2, "legal_hold = 0")):
+            if _free_gb() >= target:
                 break
+            rows = self.conn.execute(
+                "SELECT camera_id, seq, path, bytes, uploaded FROM segments "
+                f"WHERE {where} ORDER BY start_ts LIMIT 2000").fetchall()
+            if tier == 2 and rows:
+                telem.emit("eviction_unuploaded", site_id=self.site,
+                           free_gb=round(_free_gb(), 2), candidates=len(rows),
+                           severity="critical",
+                           reason="tier 1 did not relieve disk pressure; "
+                                  "evicting oldest unuploaded segments because "
+                                  "a full disk stops all recording")
+            for cam, seq, path, nbytes, uploaded in rows:
+                freed += self._unlink(path, nbytes)
+                self.conn.execute(
+                    "DELETE FROM segments WHERE camera_id=? AND seq=?", (cam, seq))
+                n += 1
+                if not uploaded:
+                    unuploaded_evicted += 1
+                if _free_gb() >= target:
+                    break
+            self.conn.commit()
+
         self.conn.commit()
-        self._audit("space_eviction", n=n, bytes=freed)
+        self._audit("space_eviction", n=n, bytes=freed,
+                    unuploaded_evicted=unuploaded_evicted)
+        telem.emit("retention_evicted", site_id=self.site, deleted=n,
+                   bytes_freed=freed, unuploaded_evicted=unuploaded_evicted,
+                   free_gb_after=round(_free_gb(), 2))
         return n, freed
 
     # ---- consent revocation --------------------------------------------
