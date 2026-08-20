@@ -1,0 +1,57 @@
+tier_common:
+- Person
+- Hardhat
+- Safety Vest
+- Mask
+- Gloves
+- NO-Hardhat
+- NO-Mask
+- NO-Safety Vest
+tier_site:
+- Ladder
+- Safety Cone
+- Excavator
+- machinery
+- wheel loader
+- dump truck
+- bus
+- truck
+- van
+- sedan
+- SUV
+- mini-van
+- semi
+- trailer
+- truck and trailer
+- vehicle
+- fire hydrant
+tier_custom: []
+source_classes:
+- Excavator
+- Gloves
+- Hardhat
+- Ladder
+- Mask
+- NO-Hardhat
+- NO-Mask
+- NO-Safety Vest
+- Person
+- SUV
+- Safety Cone
+- Safety Vest
+- bus
+- dump truck
+- fire hydrant
+- machinery
+- mini-van
+- sedan
+- semi
+- trailer
+- truck and trailer
+- truck
+- van
+- vehicle
+- wheel loader
+_note: 'three tiers, three deployment costs: common ships in the base model, site
+  ships in a shared secondary model, custom must NOT require a retrain -- that is
+  the Phase 9 open-set path.'
