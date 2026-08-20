@@ -111,21 +111,54 @@ def load_topology(path):
     return (offs or DEFAULT_OFFSETS), d.get("source_duration_s"), f"read {path}"
 
 
-def tracklets_from_db(db_path, cameras=None):
+def tracklets_from_db(db_path, cameras=None, since=None):
     """`sightings` is the authoritative tracklet record: one row per confirmed
     tracklet that closed, written before the descriptor check, so tracklets
     with no usable crop are present too."""
     conn = sqlite3.connect(db_path)
     rows = conn.execute(
-        "SELECT camera_id, track_id, ts, last_ts FROM sightings "
+        "SELECT camera_id, track_id, ts, last_ts, sighting_id FROM sightings "
         "WHERE ts IS NOT NULL AND last_ts IS NOT NULL").fetchall()
     conn.close()
     out = collections.defaultdict(list)
-    for cam, tid, first_ts, last_ts in rows:
+    for cam, tid, first_ts, last_ts, sid in rows:
+        if cameras and cam not in cameras:
+            continue
+        if since and float(first_ts) < since:
+            continue
+        out[cam].append({"track_id": tid, "first_ts": float(first_ts),
+                         "last_ts": float(last_ts), "sighting_id": sid})
+    return out
+
+
+def tracklets_from_pg(model_ver, cameras=None, since=None):
+    """Read tracklets from the SAME population the resolver will act on.
+
+    WHY THIS SOURCE EXISTS
+        track_id restarts at zero on every agent start, so (camera_id,
+        track_id) is NOT unique across runs. Ground truth built from one run
+        and joined against sightings from another will match on colliding
+        keys and report a link recall that measures nothing. Keying on
+        sighting_id, and filtering to one model version, makes the label set
+        and the evaluated set the same population by construction."""
+    import psycopg2
+    cx = psycopg2.connect(os.environ["DATABASE_URL"])
+    cur = cx.cursor()
+    sql = ("SELECT camera_id, track_id, first_ts, last_ts, sighting_id "
+           "FROM sightings WHERE first_ts IS NOT NULL AND last_ts IS NOT NULL")
+    params = []
+    if model_ver:
+        sql += " AND model_ver = %s"; params.append(model_ver)
+    if since:
+        sql += " AND first_ts >= %s"; params.append(since)
+    cur.execute(sql, params)
+    out = collections.defaultdict(list)
+    for cam, tid, first_ts, last_ts, sid in cur.fetchall():
         if cameras and cam not in cameras:
             continue
         out[cam].append({"track_id": tid, "first_ts": float(first_ts),
-                         "last_ts": float(last_ts)})
+                         "last_ts": float(last_ts), "sighting_id": sid})
+    cx.close()
     return out
 
 
@@ -196,6 +229,8 @@ def build(tracks, offsets, sign, tol, window=None, t0=None):
                     dsu.union(k1, k2)
                     pairs.append({"cam_a": c1, "track_a": a["track_id"],
                                   "cam_b": c2, "track_b": b["track_id"],
+                                  "sighting_a": a.get("sighting_id"),
+                                  "sighting_b": b.get("sighting_id"),
                                   "d_start": round(a["s"] - b["s"], 3),
                                   "d_end": round(a["e"] - b["e"], 3)})
 
@@ -211,6 +246,14 @@ def main():
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("logs", nargs="*", help="JSONL logs (fallback source)")
     ap.add_argument("--db", default="data/edge_a.db")
+    ap.add_argument("--pg", action="store_true",
+                    help="read tracklets from Postgres (same population the "
+                         "resolver evaluates), keyed by sighting_id")
+    ap.add_argument("--model-ver", default=None,
+                    help="with --pg, restrict to one model version")
+    ap.add_argument("--since", type=float, default=None,
+                    help="ignore tracklets starting before this epoch, so GT "
+                         "covers exactly one run")
     ap.add_argument("--log", action="append", default=[])
     ap.add_argument("--topology", default="data/sim/topology.json")
     ap.add_argument("--out", default="results/identity/ground_truth.json")
@@ -226,10 +269,14 @@ def main():
     offsets, src_dur, topo_note = load_topology(a.topology)
 
     log_paths = list(a.log) + list(a.logs)
-    if log_paths:
+    if a.pg:
+        tracks = tracklets_from_pg(a.model_ver, cameras, a.since)
+        source = f"postgres sightings model_ver={a.model_ver} since={a.since}"
+    elif log_paths:
         tracks, source = tracklets_from_log(log_paths, cameras), f"logs {log_paths}"
     elif pathlib.Path(a.db).exists():
-        tracks, source = tracklets_from_db(a.db, cameras), f"sightings in {a.db}"
+        tracks = tracklets_from_db(a.db, cameras, a.since)
+        source = f"sightings in {a.db} since={a.since}"
     else:
         sys.exit(f"no source: {a.db} absent and no --log given")
 
@@ -299,7 +346,8 @@ def main():
 
     by_pair = collections.Counter(f"{p['cam_a']}|{p['cam_b']}" for p in pairs)
     out = {
-        "pairs": [{k: p[k] for k in ("cam_a", "track_a", "cam_b", "track_b", "gid")}
+        "pairs": [{k: p[k] for k in ("cam_a", "track_a", "cam_b", "track_b",
+                                     "sighting_a", "sighting_b", "gid")}
                   for p in pairs],
         "n_identities": n_ids,
         "n_tracklets": n_tracks,
