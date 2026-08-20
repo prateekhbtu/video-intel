@@ -39,3 +39,4 @@ venv/
 auto.key
 auto.crt
 *.pem
+data/logs/mediamtx.log
