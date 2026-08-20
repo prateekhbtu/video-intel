@@ -1,22 +1,10 @@
 sites:
   a:
     tenant: acme-retail
-    cameras:
-    - a_cam01
-    - a_cam02
-    - a_cam03
-    - a_cam04
+    cameras: [a_cam01, a_cam02, a_cam03, a_cam04]
   b:
     tenant: globex-wh
-    cameras:
-    - b_cam01
-    - b_cam02
-analyse:
-- a_cam01
-- b_cam01
-reid_enabled:
-- a_cam01
-- a_cam02
-- a_cam03
-- a_cam04
+    cameras: [b_cam01, b_cam02]
+analyse: [a_cam01, a_cam02, a_cam03, a_cam04]
+reid_enabled: [a_cam01, a_cam02, a_cam03, a_cam04]
 record_all: true
