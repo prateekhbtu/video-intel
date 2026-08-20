@@ -47,7 +47,7 @@ ROBOFLOW_JOBS = [
     # (workspace, project, version, local dir, why)
     ("roboflow-universe-projects", "construction-site-safety", 30, "ppe",
      "base 20-class PPE inventory: the classes every customer wants"),
-    ("roboflow-100", "forklift-rzcxl", 2, "forklift",
+    ("hitsz", "forklift-and-human", 2, "forklift",
      "HELD OUT for Phase 9. Do not add to the base model."),
 ]
 
