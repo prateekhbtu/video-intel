@@ -40,3 +40,7 @@ auto.key
 auto.crt
 *.pem
 data/logs/mediamtx.log
+plan.pdf
+PS-TR-2_Build_Plan.pdf
+PS-TR-2.pdf
+ROUND2_PLAN.md
