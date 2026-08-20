@@ -1,2 +1,0 @@
-[tcp @ 0x55cdc70f4b40] Connection to tcp://127.0.0.1:8554?timeout=0 failed: Connection refused
-[out#0/rtsp @ 0x55cdc7106a80] Could not write header (incorrect codec parameters ?): Connection refused
